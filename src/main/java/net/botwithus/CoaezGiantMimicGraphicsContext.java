@@ -44,7 +44,8 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
     private static final String KEY_USE_FOOD = "useFood";
     private static final String KEY_USE_EXCALIBUR = "useExcalibur";
     private static final String KEY_USE_ELVENRITUALSHARD = "useElvenRitualShard";
-    private static final String KEY_USE_SUPER_POTIONS = "activateSuperPotions";
+    //private static final String KEY_USE_SUPER_POTIONS = "activateSuperPotions";
+    private static final String KEY_USE_ALTAR = "useAltar";
 
 
     public CoaezGiantMimicGraphicsContext(ScriptConsole scriptConsole, CoaezGiantMimic script, ScriptConfig config) {
@@ -108,7 +109,8 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
             config.addProperty(KEY_USE_FOOD, Boolean.toString(script.useFood));
             config.addProperty(KEY_USE_EXCALIBUR, Boolean.toString(script.useExcalibur));
             config.addProperty(KEY_USE_ELVENRITUALSHARD, Boolean.toString(script.useElvenRitualShard));
-            config.addProperty(KEY_USE_SUPER_POTIONS, Boolean.toString(script.activateSuperPotions));
+            //config.addProperty(KEY_USE_SUPER_POTIONS, Boolean.toString(script.activateSuperPotions));
+            config.addProperty(KEY_USE_ALTAR, Boolean.toString(script.useAltar));
 
             config.save();
         }
@@ -153,7 +155,8 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
             if (config.containsKey(KEY_USE_FOOD)) script.useFood = Boolean.parseBoolean(config.getProperty(KEY_USE_FOOD));
             if (config.containsKey(KEY_USE_EXCALIBUR)) script.useExcalibur = Boolean.parseBoolean(config.getProperty(KEY_USE_EXCALIBUR));
             if (config.containsKey(KEY_USE_ELVENRITUALSHARD)) script.useElvenRitualShard = Boolean.parseBoolean(config.getProperty(KEY_USE_ELVENRITUALSHARD));
-            if (config.containsKey(KEY_USE_SUPER_POTIONS)) script.activateSuperPotions = Boolean.parseBoolean(config.getProperty(KEY_USE_SUPER_POTIONS));
+            //if (config.containsKey(KEY_USE_SUPER_POTIONS)) script.activateSuperPotions = Boolean.parseBoolean(config.getProperty(KEY_USE_SUPER_POTIONS));
+            if (config.containsKey(KEY_USE_ALTAR)) script.useAltar = Boolean.parseBoolean(config.getProperty(KEY_USE_ALTAR));
 
         }
         
@@ -314,6 +317,8 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
         script.useFood = ImGui.Checkbox("Use food", script.useFood);
         script.useExcalibur = ImGui.Checkbox("Use Excalibur", script.useExcalibur);
         script.useElvenRitualShard = ImGui.Checkbox("Use Ritual Shard", script.useElvenRitualShard);
+        script.useAltar = ImGui.Checkbox("Use Altar of War", script.useAltar);
+
         //script.activateSuperPotions = ImGui.Checkbox("Use Super Potions", script.activateSuperPotions);
 
     }

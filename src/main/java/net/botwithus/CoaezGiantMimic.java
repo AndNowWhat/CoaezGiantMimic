@@ -96,7 +96,8 @@ public class CoaezGiantMimic extends LoopingScript {
     public boolean useFood;
     public boolean useExcalibur;
     public boolean useElvenRitualShard;
-    public boolean activateSuperPotions;
+    public boolean useAltar;
+    //public boolean activateSuperPotions;
 
     // Necro prayers
     public boolean activateSanctity;
@@ -174,6 +175,7 @@ public class CoaezGiantMimic extends LoopingScript {
         this.useFood = false;
         this.useExcalibur = false;
         this.useElvenRitualShard = false;
+        this.useAltar = false;
 
         // Necro prayers
         this.activateSanctity = false;
@@ -237,7 +239,6 @@ public class CoaezGiantMimic extends LoopingScript {
             String itemName = item.getName();
             Component itemComponent = ComponentQuery.newQuery(1473).componentIndex(5).itemName(itemName).results().first();
             if (itemComponent != null) {
-                getConsole().println("Interacting with: " + itemName + " with option: " + option);
                 itemComponent.interact(option);
                 return true;
             } else {
@@ -368,13 +369,11 @@ public class CoaezGiantMimic extends LoopingScript {
         LocalPlayer player = Client.getLocalPlayer();
 
         if (bankChest != null && bankChest.getCoordinate().distanceTo(player.getCoordinate()) < 10) {
-            getConsole().println("Already near bank chest, proceeding to load preset.");
             loadPreset();
         } else {
             getConsole().println("Navigating to War's Retreat.");
             boolean success = ActionBar.useTeleport("War's Retreat Teleport");
             if (success) {
-                getConsole().println("Teleport to War's Retreat successful.");
                 Execution.delayUntil(random.nextLong(6000, 8000), () -> {
                     SceneObject updatedBankChest = SceneObjectQuery.newQuery().name("Bank chest").results().nearest();
                     return updatedBankChest != null && updatedBankChest.isReachable();
@@ -450,9 +449,13 @@ public class CoaezGiantMimic extends LoopingScript {
     }
 
     private void handleRefillPrayer() {
+        if (!useAltar) {
+            botState = BotState.USE_TOKEN;
+            return;
+        }
+
         if (botState != BotState.REFILL_PRAYER) return;
 
-        getConsole().println("Trying to use Altar");
         SceneObject altar = SceneObjectQuery.newQuery()
             .name("Altar of War")
             .option("Pray")
@@ -480,7 +483,6 @@ public class CoaezGiantMimic extends LoopingScript {
         SceneObject altar = SceneObjectQuery.newQuery().name("Altar of War").results().nearest();
         
         if (altar != null) {
-            getConsole().println("Altar of War is still present in the scene. Waiting...");
             botState = BotState.USE_TOKEN; 
             return;
         }
@@ -542,7 +544,8 @@ public class CoaezGiantMimic extends LoopingScript {
                     }
                     break;
             }
-
+            isElvenRitualShardOnCooldown();
+            isExcaliburOnCooldown();
             if (healIfNecessary()) {
                 return;
             }
@@ -554,7 +557,6 @@ public class CoaezGiantMimic extends LoopingScript {
                 handleOverloadPotion();
             }
         } else {
-            getConsole().println("Giant Mimic not found.");
             mimicSpawned = false;
             if (mimicKilled()) {
                 mimicKillCounter++;
@@ -573,19 +575,16 @@ public class CoaezGiantMimic extends LoopingScript {
 	
     private void handleLeapAttack(Npc mimic, boolean surgeReady) {
         if (useSurge && surgeReady) {
-            getConsole().println("Mimic is using a leap attack. Using Surge.");
             useSurge();
             lastSurgeTime = System.currentTimeMillis();
         } else {
-            getConsole().println("Leap attack detected. Moving player to mimic's position plus two tiles further.");
 
             LocalPlayer player = Client.getLocalPlayer();
             Coordinate mimicCoordinate = mimic.getCoordinate();
             int direction1 = (int) player.getDirection1();
             int direction2 = (int) player.getDirection2();
-            Coordinate targetCoordinate = getTargetCoordinate(mimicCoordinate, direction1, direction2, 3);
+            Coordinate targetCoordinate = getTargetCoordinate(mimicCoordinate, direction1, direction2, 5);
 
-            // Move to the target position
             moveTo(targetCoordinate);
         }
         Execution.delay(random.nextLong(600, 1200));
@@ -623,20 +622,16 @@ public class CoaezGiantMimic extends LoopingScript {
 	    
     private void handleChargeAttack(Npc mimic, boolean surgeReady) {
         if (useSurge && surgeReady) {
-            getConsole().println("Mimic is using a charge attack. Using Surge.");
             useSurge();
             lastSurgeTime = System.currentTimeMillis();
         } else {
-            getConsole().println("Charge attack detected. Moving player to avoid.");
 
-            // Calculate the target position to avoid the charge attack
             LocalPlayer player = Client.getLocalPlayer();
             Coordinate playerCoordinate = player.getCoordinate();
             int direction1 = (int) player.getDirection1();
             int direction2 = (int) player.getDirection2();
             Coordinate targetCoordinate = getAvoidanceCoordinate(playerCoordinate, direction1, direction2, 6);
 
-            // Move to the target position
             moveTo(targetCoordinate);
         }
         Execution.delay(100);
@@ -646,7 +641,6 @@ public class CoaezGiantMimic extends LoopingScript {
     private Coordinate getAvoidanceCoordinate(Coordinate start, int direction1, int direction2, int distance) {
         List<Coordinate> possibleCoordinates = new ArrayList<>();
 
-        // Generate possible coordinates to the sides and backwards based on the player's direction
         switch (direction1) {
             case 0: // North
                 possibleCoordinates.add(new Coordinate(start.getX() + distance, start.getY(), start.getZ())); // East
@@ -690,10 +684,8 @@ public class CoaezGiantMimic extends LoopingScript {
                 break;
         }
 
-        // Shuffle possible coordinates to introduce randomness in the avoidance direction
         java.util.Collections.shuffle(possibleCoordinates);
 
-        // Return the first valid coordinate
         return possibleCoordinates.get(0);
     }
 	
@@ -705,9 +697,7 @@ public class CoaezGiantMimic extends LoopingScript {
     }
 
     private void handleOverloadPotion() {
-        getConsole().println("Overload potion is not active. Drinking potion.");
         if (inventoryInteract("Drink", "overload")) {
-            getConsole().println("Drinking Overload potion.");
             boolean success = Execution.delayUntil(random.nextInt(1200, 1800), () -> isOverloadPotActive());
             if (success) {
                 getConsole().println("Overload potion activated.");
@@ -723,7 +713,6 @@ public class CoaezGiantMimic extends LoopingScript {
     private boolean checkMimicSpawn() {
         Npc mimic = NpcQuery.newQuery().name("Giant Mimic").results().nearest();
         if (mimic != null) {
-            getConsole().println("Giant Mimic has spawned.");
             return true;
         } else {
             Execution.delay(100);
@@ -731,20 +720,9 @@ public class CoaezGiantMimic extends LoopingScript {
         }
     }
 
-    private void useSurgeDelayed() {
-        if (ActionBar.getCooldown("Surge") <= 0) {
-            int delayBeforeCasting = RandomGenerator.nextInt(800, 1000);
-            getConsole().println("Delaying for " + delayBeforeCasting + "ms before casting Surge.");
-            Execution.delay(delayBeforeCasting);
-            getConsole().println("Surge is not on cooldown. Casting Surge: " + ActionBar.useAbility("Surge"));
-        } else {
-            getConsole().println("Surge is on cooldown, cannot cast.");
-        }
-    }
-
     private void useSurge() {
         ActionBar.useAbility("Surge");
-        Execution.delay(random.nextLong(1550, 2050));
+        Execution.delay(2400);
 
     }
 
@@ -813,32 +791,92 @@ public class CoaezGiantMimic extends LoopingScript {
             enablePrayer("Ruination");
         }
     }
+
+    public boolean isExcaliburOnCooldown() {
+        int value = VarManager.getVarbitValue(22838);
+        return value != 0; 
+    }
+
+    public boolean isElvenRitualShardOnCooldown() {
+        int value = VarManager.getVarbitValue(40606);
+        return value != 0;
+    }
     
     public boolean isOverloadPotActive() {
     	Component overloadTimer = ComponentQuery.newQuery(284).item(49039).results().first();
     	return overloadTimer != null;
         }
-
-    private boolean isPrayerPointsLow() {
-        LocalPlayer player = Client.getLocalPlayer();
-        if (player == null) {
-            getConsole().println("Player not found.");
-            return false;
-        }
-
-        int prayerPoints = player.getPrayerPoints();
-        int maxPrayerPoints = 990;
-        return prayerPoints < (maxPrayerPoints / 2);
-    }
     
     private void enablePrayer(String prayerName) {
         boolean success = ActionBar.usePrayer(prayerName);
         Execution.delay(random.nextLong(1550, 2050));
-        getConsole().println("Enabled " + prayerName);
         if (success) {
-            getConsole().println("Successfully enabled " + prayerName + "!");
+            getConsole().println("Enabled " + prayerName + "!");
         }
     }
+    
+    private boolean enableExcalibur() {
+        List<Item> excaliburItems = Backpack.getItemsWithOption("Activate");
+        getConsole().println("Found " + excaliburItems.size() + " items with 'Activate' option in the inventory.");
+        boolean success = false;
+
+        if (!excaliburItems.isEmpty()) {
+            for (Item excaliburItem : excaliburItems) {
+                getConsole().println("Checking item: " + excaliburItem.getName());
+                if (excaliburItem.getName().equalsIgnoreCase("Excalibur")) {
+                    getConsole().println("Attempting to activate Excalibur.");
+                    success = inventoryInteract("Activate", excaliburItem.getName());
+                    if (success) {
+                        getConsole().println("Used Excalibur");
+                        Execution.delay(800); 
+                        break;
+                    } else {
+                        getConsole().println("Failed to activate Excalibur.");
+                    }
+                }
+            }
+        } else {
+            getConsole().println("No items with 'Activate' option found in the inventory.");
+        }
+
+        if (!success) {
+            getConsole().println("Failed to use Excalibur.");
+        }
+
+        return success;
+    }
+
+    private boolean enableElvenShard() {
+        List<Item> shardItems = Backpack.getItemsWithOption("Activate");
+        getConsole().println("Found " + shardItems.size() + " items with 'Activate' option in the inventory.");
+        boolean success = false;
+
+        if (!shardItems.isEmpty()) {
+            for (Item shardItem : shardItems) {
+                getConsole().println("Checking item: " + shardItem.getName());
+                if (shardItem.getName().equalsIgnoreCase("Ancient elven ritual shard")) {
+                    getConsole().println("Attempting to activate elven shard.");
+                    success = inventoryInteract("Activate", shardItem.getName());
+                    if (success) {
+                        getConsole().println("Used elven shard");
+                        Execution.delay(800); 
+                        break;
+                    } else {
+                        getConsole().println("Failed to activate elven shard.");
+                    }
+                }
+            }
+        } else {
+            getConsole().println("No items with 'Activate' option found in the inventory.");
+        }
+
+        if (!success) {
+            getConsole().println("Failed to use elven shard.");
+        }
+
+        return success;
+    }
+
 
     private boolean mimicKilled() {
         SpotAnimationQuery query = SpotAnimationQuery.newQuery().animations(4183);
@@ -854,8 +892,6 @@ public class CoaezGiantMimic extends LoopingScript {
             "Huge loot chest"
         };
 
-        getConsole().println("Looking for loot chests on the ground.");
-
         for (String chestName : lootChestNames) {
             GroundItem lootChest = GroundItemQuery.newQuery()
                 .name(chestName)
@@ -863,7 +899,6 @@ public class CoaezGiantMimic extends LoopingScript {
                 .nearest();
 
             if (lootChest != null) {
-                getConsole().println("Found loot chest: " + lootChest.getName());
                 lootChest.interact("Take");
 
                 boolean success = Execution.delayUntil(random.nextLong(6000, 8000), () -> {
@@ -871,7 +906,7 @@ public class CoaezGiantMimic extends LoopingScript {
                 });
 
                 if (success) {
-                    getConsole().println("Loot chest picked up, attempting to open it.");
+                    getConsole().println("Loot chest picked up, opening...");
                     handleOpeningLoot();
                 } else {
                     getConsole().println("Failed to pick up loot chest in time.");
@@ -891,8 +926,6 @@ public class CoaezGiantMimic extends LoopingScript {
             "Huge loot chest"
         };
 
-        getConsole().println("Attempting to open loot chests in inventory.");
-
         boolean interactionSuccessful = false;
 
         for (String chestName : lootChestNames) {
@@ -902,7 +935,6 @@ public class CoaezGiantMimic extends LoopingScript {
                 boolean opened = Execution.delayUntil(timeout, () -> !Backpack.contains(chestName));
                 
                 if (opened) {
-                    getConsole().println(chestName + " opened successfully.");
                     botState = BotState.NAVIGATING_TO_WARS_RETREAT;
                     interactionSuccessful = true;
                     break;
@@ -913,7 +945,6 @@ public class CoaezGiantMimic extends LoopingScript {
         }
 
         if (!interactionSuccessful) {
-            getConsole().println("Failed to perform open action on any loot chest.");
             botState = BotState.NAVIGATING_TO_WARS_RETREAT;
         }
     }
@@ -934,7 +965,6 @@ public class CoaezGiantMimic extends LoopingScript {
                     case CONFIRM_YES:
                         if (Interfaces.isOpen(1188)) {
                             pressKeyAndAdvance(KeyEvent.VK_1, DialogState.SELECT_DIFFICULTY);
-                            getConsole().println("Selecting Yes option");
                         }
                         break;
                     case SELECT_DIFFICULTY:
@@ -948,13 +978,12 @@ public class CoaezGiantMimic extends LoopingScript {
             }
 
             if (!Dialog.isOpen()) {
-                getConsole().println("Dialog not open currently. Proceeding.");
                 return;
             }
 
             retryCount++;
             getConsole().println("Retrying... Attempt: " + retryCount);
-            Execution.delay(1000); 
+            Execution.delay(200); 
         }
 
         getConsole().println("Max retries reached. Exiting...");
@@ -1025,8 +1054,6 @@ public class CoaezGiantMimic extends LoopingScript {
             return false;
         }
 
-        getConsole().println("Attempting to move to: " + coordinate);
-
         Movement.walkTo(coordinate.getX(), coordinate.getY(), false);
 
         activateSelectedPrayersAndCurses();
@@ -1037,19 +1064,15 @@ public class CoaezGiantMimic extends LoopingScript {
         });
 
         if (reached) {
-            getConsole().println("Successfully moved to: " + coordinate);
             return true;
         } else {
-            getConsole().println("Failed to move to: " + coordinate);
             return false;
         }
     }
 
     private boolean moveTo(Coordinate location) {
-        println("moveTo");
         LocalPlayer player = Client.getLocalPlayer();
 
-        println("moveTo | Attempting to traverse to location: " + location);
 
         Movement.walkTo(location.getX(), location.getY(), false);
 
@@ -1058,10 +1081,8 @@ public class CoaezGiantMimic extends LoopingScript {
         });
 
         if (reached) {
-            println("moveTo | Successfully moved to the area.");
             return true;
         } else {
-            println("moveTo | Failed to move to: " + location);
             return false;
         }
     }
@@ -1092,10 +1113,8 @@ public class CoaezGiantMimic extends LoopingScript {
 
         for (Coordinate move : possibleMoves) {
             if (moveToWithPrayers(move)) {
-                getConsole().println("Successfully moved to the side to: " + move);
                 return;
             } else {
-                getConsole().println("Failed to move to: " + move);
             }
         }
 
@@ -1182,7 +1201,6 @@ public class CoaezGiantMimic extends LoopingScript {
     private List<Coordinate> getSafeCoordinatesAwayFromMimic(Coordinate playerCoordinate, Area mimicArea, int minDistance) {
         List<Coordinate> possibleCoordinates = new ArrayList<>();
 
-        // Generate coordinates at least minDistance tiles away in all directions
         possibleCoordinates.add(new Coordinate(playerCoordinate.getX() + minDistance, playerCoordinate.getY(), playerCoordinate.getZ()));
         possibleCoordinates.add(new Coordinate(playerCoordinate.getX() - minDistance, playerCoordinate.getY(), playerCoordinate.getZ()));
         possibleCoordinates.add(new Coordinate(playerCoordinate.getX(), playerCoordinate.getY() + minDistance, playerCoordinate.getZ()));
@@ -1192,7 +1210,6 @@ public class CoaezGiantMimic extends LoopingScript {
         possibleCoordinates.add(new Coordinate(playerCoordinate.getX() + minDistance, playerCoordinate.getY() - minDistance, playerCoordinate.getZ()));
         possibleCoordinates.add(new Coordinate(playerCoordinate.getX() - minDistance, playerCoordinate.getY() + minDistance, playerCoordinate.getZ()));
 
-        // Filter out coordinates that are within the mimic's area
         return possibleCoordinates.stream()
                 .filter(coord -> !mimicArea.contains(coord))
                 .collect(Collectors.toList());
@@ -1201,7 +1218,6 @@ public class CoaezGiantMimic extends LoopingScript {
     private List<Coordinate> getSafeCoordinatesAwayFromMimic(Coordinate playerCoordinate, Area mimicArea) {
         List<Coordinate> possibleCoordinates = new ArrayList<>();
 
-        // Generate coordinates around the player
         possibleCoordinates.add(new Coordinate(playerCoordinate.getX() + 3, playerCoordinate.getY(), playerCoordinate.getZ()));
         possibleCoordinates.add(new Coordinate(playerCoordinate.getX() - 3, playerCoordinate.getY(), playerCoordinate.getZ()));
         possibleCoordinates.add(new Coordinate(playerCoordinate.getX(), playerCoordinate.getY() + 3, playerCoordinate.getZ()));
@@ -1211,7 +1227,6 @@ public class CoaezGiantMimic extends LoopingScript {
         possibleCoordinates.add(new Coordinate(playerCoordinate.getX() + 3, playerCoordinate.getY() - 3, playerCoordinate.getZ()));
         possibleCoordinates.add(new Coordinate(playerCoordinate.getX() - 3, playerCoordinate.getY() + 3, playerCoordinate.getZ()));
 
-        // Filter out coordinates that are within the mimic's area
         return possibleCoordinates.stream()
                 .filter(coord -> !mimicArea.contains(coord))
                 .collect(Collectors.toList());
@@ -1289,27 +1304,25 @@ public class CoaezGiantMimic extends LoopingScript {
         }
         return -1;
     }
-
     
     public boolean healIfNecessary() {
         boolean healed = false;
+        int healthPercentage = getHealthPercentage();
 
-        if (useExcalibur && getHealthPercentage() < 90 && !isExcaliburOnCooldown()) {
-            if (activateExcalibur()) {
-                getConsole().println("Activated Excalibur for healing.");
+        if (useExcalibur && healthPercentage < 90 && !isExcaliburOnCooldown()) {
+            if (enableExcalibur()) {
                 healed = true;
             } else {
                 getConsole().println("Failed to activate Excalibur.");
             }
         }
 
-        if (useFood && getHealthPercentage() < 70) {
+        if (useFood && healthPercentage < 70) {
             List<Item> foodItems = Backpack.getItemsWithOption("Eat");
             if (!foodItems.isEmpty()) {
                 for (Item foodItem : foodItems) {
                     if (inventoryInteract("Eat", foodItem.getName())) {
                         Execution.delay(random.nextInt(1600, 2000));
-                        getConsole().println("Healing player with food.");
                         healed = true;
                         break;
                     }
@@ -1325,13 +1338,12 @@ public class CoaezGiantMimic extends LoopingScript {
         return healed;
     }
 
-    
     public boolean restorePrayerIfNecessary() {
         boolean restored = false;
+        int prayerPercentage = getPrayerPercentage() / 10;
 
-        if (useElvenRitualShard && getPrayerPercentage() < 30 && !isElvenRitualShardOnCooldown()) {
-            if (activateElvenRitualShard()) {
-                getConsole().println("Activated Elven Ritual Shard for prayer restoration.");
+        if (useElvenRitualShard && prayerPercentage < 90 && !isElvenRitualShardOnCooldown()) {
+            if (enableElvenShard()) {
                 restored = true;
             } else {
                 getConsole().println("Failed to activate Elven Ritual Shard.");
@@ -1339,21 +1351,6 @@ public class CoaezGiantMimic extends LoopingScript {
         }
 
         return restored;
-    }
-
-
-    public boolean isExcaliburOnCooldown() {
-        return VarManager.getVarbitValue(22838) == 0;
-    }
-    public boolean isElvenRitualShardOnCooldown() {
-        return VarManager.getVarbitValue(40606) == 0;
-    }
-    public boolean activateExcalibur() {
-        return inventoryInteract("Activate", "Excalibur");
-    }
-
-    public boolean activateElvenRitualShard() {
-        return inventoryInteract("Activate", "Elven Ritual Shard");
     }
 
     @Override
