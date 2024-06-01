@@ -544,8 +544,7 @@ public class CoaezGiantMimic extends LoopingScript {
                     }
                     break;
             }
-            isElvenRitualShardOnCooldown();
-            isExcaliburOnCooldown();
+
             if (healIfNecessary()) {
                 return;
             }
@@ -572,14 +571,13 @@ public class CoaezGiantMimic extends LoopingScript {
         }
         activateSelectedPrayersAndCurses();
     }
-	
+    
     private void handleLeapAttack(Npc mimic, boolean surgeReady) {
+        LocalPlayer player = Client.getLocalPlayer();
         if (useSurge && surgeReady) {
             useSurge();
             lastSurgeTime = System.currentTimeMillis();
-        } else {
-
-            LocalPlayer player = Client.getLocalPlayer();
+        } else if (System.currentTimeMillis() - lastSurgeTime >= SURGE_COOLDOWN) {
             Coordinate mimicCoordinate = mimic.getCoordinate();
             int direction1 = (int) player.getDirection1();
             int direction2 = (int) player.getDirection2();
@@ -587,7 +585,7 @@ public class CoaezGiantMimic extends LoopingScript {
 
             moveTo(targetCoordinate);
         }
-        Execution.delay(random.nextLong(600, 1200));
+        Execution.delay(100);
         mimic.interact("Attack");
     }
 
@@ -621,12 +619,11 @@ public class CoaezGiantMimic extends LoopingScript {
     }
 	    
     private void handleChargeAttack(Npc mimic, boolean surgeReady) {
+        LocalPlayer player = Client.getLocalPlayer();
         if (useSurge && surgeReady) {
             useSurge();
             lastSurgeTime = System.currentTimeMillis();
-        } else {
-
-            LocalPlayer player = Client.getLocalPlayer();
+        } else if (System.currentTimeMillis() - lastSurgeTime >= SURGE_COOLDOWN) {
             Coordinate playerCoordinate = player.getCoordinate();
             int direction1 = (int) player.getDirection1();
             int direction2 = (int) player.getDirection2();
@@ -722,7 +719,7 @@ public class CoaezGiantMimic extends LoopingScript {
 
     private void useSurge() {
         ActionBar.useAbility("Surge");
-        Execution.delay(2400);
+        Execution.delay(1200);
 
     }
 
@@ -1106,8 +1103,6 @@ public class CoaezGiantMimic extends LoopingScript {
             } else {
             }
         }
-
-        getConsole().println("Failed to move to the side. No valid paths found.");
     }
 
     public void movePlayerAvoidingProjectiles(Npc mimic, int moveCount) {
@@ -1118,13 +1113,12 @@ public class CoaezGiantMimic extends LoopingScript {
         List<Coordinate> visitedPositions = new ArrayList<>();
 
         for (int i = 0; i < moveCount; i++) {
-            Coordinate safeCoordinate = findSafeCoordinate(playerCoordinate, projectileLandingPositions, 6, mimicCoordinate, 2, 10, visitedPositions);
+            Coordinate safeCoordinate = findSafeCoordinate(playerCoordinate, projectileLandingPositions, 6, mimicCoordinate, 4, 10, visitedPositions);
             if (safeCoordinate != null) {
                 moveTo(safeCoordinate);
                 visitedPositions.add(safeCoordinate);
                 playerCoordinate = safeCoordinate;
             } else {
-                getConsole().println("No safe coordinate found, stopping.");
                 break;
             }
         }
