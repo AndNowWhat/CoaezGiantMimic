@@ -816,67 +816,58 @@ public class CoaezGiantMimic extends LoopingScript {
     }
     
     private boolean enableExcalibur() {
-        List<Item> excaliburItems = Backpack.getItemsWithOption("Activate");
-        getConsole().println("Found " + excaliburItems.size() + " items with 'Activate' option in the inventory.");
-        boolean success = false;
+        if (isExcaliburOnCooldown()) {
+            return false;
+        }
 
-        if (!excaliburItems.isEmpty()) {
-            for (Item excaliburItem : excaliburItems) {
-                getConsole().println("Checking item: " + excaliburItem.getName());
-                if (excaliburItem.getName().equalsIgnoreCase("Excalibur")) {
-                    getConsole().println("Attempting to activate Excalibur.");
-                    success = inventoryInteract("Activate", excaliburItem.getName());
-                    if (success) {
-                        getConsole().println("Used Excalibur");
-                        Execution.delay(800); 
-                        break;
-                    } else {
-                        getConsole().println("Failed to activate Excalibur.");
-                    }
-                }
+        ResultSet<Component> results = ComponentQuery.newQuery(1473)
+                                                     .componentIndex(5)
+                                                     .itemName("Augmented enhanced Excalibur")
+                                                     .option("Activate")
+                                                     .results();
+        if (!results.isEmpty()) {
+            Component excaliburComponent = results.first();
+            boolean success = excaliburComponent.interact("Activate");
+            if (success) {
+                getConsole().println("Used Excalibur");
+                Execution.delay(800);
+                return true;
+            } else {
+                getConsole().println("Failed to activate Excalibur.");
             }
         } else {
-            getConsole().println("No items with 'Activate' option found in the inventory.");
+            getConsole().println("Excalibur not found in the inventory.");
         }
 
-        if (!success) {
-            getConsole().println("Failed to use Excalibur.");
-        }
-
-        return success;
+        return false;
     }
 
     private boolean enableElvenShard() {
-        List<Item> shardItems = Backpack.getItemsWithOption("Activate");
-        getConsole().println("Found " + shardItems.size() + " items with 'Activate' option in the inventory.");
-        boolean success = false;
+        if (isElvenRitualShardOnCooldown()) {
+            return false;
+        }
 
-        if (!shardItems.isEmpty()) {
-            for (Item shardItem : shardItems) {
-                getConsole().println("Checking item: " + shardItem.getName());
-                if (shardItem.getName().equalsIgnoreCase("Ancient elven ritual shard")) {
-                    getConsole().println("Attempting to activate elven shard.");
-                    success = inventoryInteract("Activate", shardItem.getName());
-                    if (success) {
-                        getConsole().println("Used elven shard");
-                        Execution.delay(800); 
-                        break;
-                    } else {
-                        getConsole().println("Failed to activate elven shard.");
-                    }
-                }
+        ResultSet<Component> results = ComponentQuery.newQuery(1473)
+                                                     .componentIndex(5)
+                                                     .itemName("Ancient elven ritual shard")
+                                                     .option("Activate")
+                                                     .results();
+        if (!results.isEmpty()) {
+            Component shardComponent = results.first();
+            boolean success = shardComponent.interact("Activate");
+            if (success) {
+                getConsole().println("Used Elven Shard");
+                Execution.delay(800);
+                return true;
+            } else {
+                getConsole().println("Failed to activate Elven Shard.");
             }
         } else {
-            getConsole().println("No items with 'Activate' option found in the inventory.");
+            getConsole().println("Elven Shard not found in the inventory.");
         }
 
-        if (!success) {
-            getConsole().println("Failed to use elven shard.");
-        }
-
-        return success;
+        return false;
     }
-
 
     private boolean mimicKilled() {
         SpotAnimationQuery query = SpotAnimationQuery.newQuery().animations(4183);
@@ -906,7 +897,6 @@ public class CoaezGiantMimic extends LoopingScript {
                 });
 
                 if (success) {
-                    getConsole().println("Loot chest picked up, opening...");
                     handleOpeningLoot();
                 } else {
                     getConsole().println("Failed to pick up loot chest in time.");
@@ -930,7 +920,6 @@ public class CoaezGiantMimic extends LoopingScript {
 
         for (String chestName : lootChestNames) {
             if (inventoryInteract("Open", chestName)) {
-                getConsole().println("Open action performed on " + chestName + ".");
                 long timeout = random.nextInt(600) + 1200;
                 boolean opened = Execution.delayUntil(timeout, () -> !Backpack.contains(chestName));
                 
@@ -946,7 +935,8 @@ public class CoaezGiantMimic extends LoopingScript {
 
         if (!interactionSuccessful) {
             botState = BotState.NAVIGATING_TO_WARS_RETREAT;
-        }
+        }else 
+            botState = BotState.NAVIGATING_TO_WARS_RETREAT;
     }
     
     private void handleMimicDialog() {
@@ -957,7 +947,6 @@ public class CoaezGiantMimic extends LoopingScript {
             long startTime = System.currentTimeMillis();
 
             while (Dialog.isOpen() && (System.currentTimeMillis() - startTime < TIMEOUT)) {
-                getConsole().println("Current Dialog State: " + dialogState);
                 switch (dialogState) {
                     case START:
                         dialogState = DialogState.CONFIRM_YES;
@@ -1260,7 +1249,7 @@ public class CoaezGiantMimic extends LoopingScript {
             if (moved) {
                 botState = BotState.COMBAT;
             } else {
-                getConsole().println("Failed to move to the arena middle.");
+                getConsole().println("Failed to move closer to Arena center.");
             }
         } else {
             getConsole().println("Failed to determine target coordinate.");
