@@ -877,32 +877,41 @@ public class CoaezGiantMimic extends LoopingScript {
             "Small loot chest",
             "Medium loot chest",
             "Large loot chest",
-            "Huge loot chest"
+            "Huge loot chest",
+            "Mimic plushie",
+            "Mimic tongue cape"
         };
 
-        for (String chestName : lootChestNames) {
-            GroundItem lootChest = GroundItemQuery.newQuery()
-                .name(chestName)
-                .results()
-                .nearest();
+        boolean foundLoot = true;
+        while (foundLoot) {
+            foundLoot = false;
+            for (String chestName : lootChestNames) {
+                GroundItem lootChest = GroundItemQuery.newQuery()
+                    .name(chestName)
+                    .results()
+                    .nearest();
 
-            if (lootChest != null) {
-                lootChest.interact("Take");
+                if (lootChest != null) {
+                    foundLoot = true;
+                    lootChest.interact("Take");
 
-                boolean success = Execution.delayUntil(random.nextLong(6000, 8000), () -> {
-                    return GroundItemQuery.newQuery().name(chestName).results().nearest() == null;
-                });
+                    boolean success = Execution.delayUntil(random.nextLong(6000, 8000), () -> {
+                        return GroundItemQuery.newQuery().name(chestName).results().nearest() == null;
+                    });
 
-                if (success) {
-                    handleOpeningLoot();
-                } else {
-                    getConsole().println("Failed to pick up loot chest in time.");
+                    if (success) {
+                        handleOpeningLoot();
+                    } else {
+                        getConsole().println("Failed to pick up loot chest in time.");
+                    }
+                    break;
                 }
-                return;
             }
         }
 
-        getConsole().println("No loot chests found.");
+        if (!foundLoot) {
+            getConsole().println("No loot chests found.");
+        }
     }
   
     private void handleOpeningLoot() {
