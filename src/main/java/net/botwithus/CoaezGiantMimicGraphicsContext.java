@@ -46,6 +46,7 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
     private static final String KEY_USE_ELVENRITUALSHARD = "useElvenRitualShard";
     //private static final String KEY_USE_SUPER_POTIONS = "activateSuperPotions";
     private static final String KEY_USE_ALTAR = "useAltar";
+    private static final String KEY_USE_INVOKEDEATH = "useInvokeDeath";
 
 
     public CoaezGiantMimicGraphicsContext(ScriptConsole scriptConsole, CoaezGiantMimic script, ScriptConfig config) {
@@ -111,6 +112,7 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
             config.addProperty(KEY_USE_ELVENRITUALSHARD, Boolean.toString(script.useElvenRitualShard));
             //config.addProperty(KEY_USE_SUPER_POTIONS, Boolean.toString(script.activateSuperPotions));
             config.addProperty(KEY_USE_ALTAR, Boolean.toString(script.useAltar));
+            config.addProperty(KEY_USE_INVOKEDEATH, Boolean.toString(script.useInvokeDeath));
 
             config.save();
         }
@@ -157,11 +159,11 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
             if (config.containsKey(KEY_USE_ELVENRITUALSHARD)) script.useElvenRitualShard = Boolean.parseBoolean(config.getProperty(KEY_USE_ELVENRITUALSHARD));
             //if (config.containsKey(KEY_USE_SUPER_POTIONS)) script.activateSuperPotions = Boolean.parseBoolean(config.getProperty(KEY_USE_SUPER_POTIONS));
             if (config.containsKey(KEY_USE_ALTAR)) script.useAltar = Boolean.parseBoolean(config.getProperty(KEY_USE_ALTAR));
+            if (config.containsKey(KEY_USE_INVOKEDEATH)) script.useInvokeDeath = Boolean.parseBoolean(config.getProperty(KEY_USE_INVOKEDEATH));
 
         }
         
     }
-
 
     @Override
     public void drawSettings() {
@@ -196,7 +198,14 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
                 ImGui.Text("Average Kill Time: N/A");
             }
 
-            if (ImGui.BeginTabBar("DifficultyTabBar", ImGuiWindowFlag.None.getValue())) {
+            if (ImGui.BeginTabBar("SettingsTabBar", ImGuiWindowFlag.None.getValue())) {
+                // Description Tab
+                if (ImGui.BeginTabItem("Description", ImGuiWindowFlag.None.getValue())) {
+                    drawDescriptionWindow();
+                    ImGui.EndTabItem();
+                }
+
+                // Difficulty Settings Tab
                 if (ImGui.BeginTabItem("Difficulty Settings", ImGuiWindowFlag.None.getValue())) {
                     ImGui.BeginChild("DifficultySettingsChild", 0.0f, 350.0f, true, 0);
 
@@ -242,6 +251,7 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
                     ImGui.EndTabItem();
                 }
 
+                // Prayer Settings Tab
                 if (ImGui.BeginTabItem("Prayer Settings", ImGuiWindowFlag.None.getValue())) {
                     ImGui.BeginChild("PrayerSettingsChild", 0.0f, 350.0f, true, 0);
 
@@ -251,6 +261,7 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
                     ImGui.EndTabItem();
                 }
 
+                // Utility Settings Tab
                 if (ImGui.BeginTabItem("Utility Settings", ImGuiWindowFlag.None.getValue())) {
                     ImGui.BeginChild("UtilitySettingsChild", 0.0f, 350.0f, true, 0);
 
@@ -266,7 +277,8 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
             ImGui.End();
         }
     }
-    
+
+
     private String formatTime(long timeInMillis) {
         long hours = timeInMillis / 3600000;
         long minutes = (timeInMillis / 60000) % 60;
@@ -318,10 +330,36 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
         script.useExcalibur = ImGui.Checkbox("Use Excalibur", script.useExcalibur);
         script.useElvenRitualShard = ImGui.Checkbox("Use Ritual Shard", script.useElvenRitualShard);
         script.useAltar = ImGui.Checkbox("Use Altar of War", script.useAltar);
+        script.useInvokeDeath = ImGui.Checkbox("Use Invoke Death", script.useInvokeDeath);
 
         //script.activateSuperPotions = ImGui.Checkbox("Use Super Potions", script.activateSuperPotions);
 
     }
+    
+    private void drawDescriptionWindow() {
+        ImGui.Text("Kills Giant Mimic on all difficulties.");
+
+        ImGui.Text("Usage:");
+        ImGui.Text("- Turn OFF area loot.");
+        ImGui.Text("- Select Difficulty: Choose the desired difficulty setting.");
+        ImGui.Text("- Configure Prayers: Set up prayer we will use.");
+        ImGui.Text("- Utility Settings: Select utility options like surge, excalibur, shard etc...");
+        ImGui.Text("- Save/Load Configurations: Save your settings for future use.");
+        ImGui.Text("- Start the Script: Press start to begin.");
+
+        ImGui.Text("Requirements:");
+        ImGui.Text("- Combat Mode: Revolution combat.");
+        ImGui.Text("- Starting Point: Begin in War's Retreat.");
+        ImGui.Text("- Preset: Load a preset with necessary items (tokens, food, overloads).");
+        ImGui.Text("- Action Bar Visibility: Ensure selected skills/prayers are visible on the action bar (excluding food/overloads).");
+        ImGui.Text("- Food Option: Ensure food has the 'eat' option.");
+
+        ImGui.Text("Recommended Setup for Hard/Elite Difficulty:");
+        ImGui.Text("- DPS: Sufficient DPM with Revolution to defeat the Mimic within 2:30 (using t95/t90 weapons).");
+        ImGui.Text("- Movement: Double surge.");
+        ImGui.Text("- Utility Items: Elven ritual shard and enhanced Excalibur, unless fully maxed as it will slow us down");
+    }
+
 
     private void setAllFalse() {
         setBeginner(false);

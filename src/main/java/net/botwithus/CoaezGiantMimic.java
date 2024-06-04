@@ -97,6 +97,9 @@ public class CoaezGiantMimic extends LoopingScript {
     public boolean useExcalibur;
     public boolean useElvenRitualShard;
     public boolean useAltar;
+    public boolean useInvokeDeath;
+    private boolean invokeDeathUsed = false;
+
     //public boolean activateSuperPotions;
 
     // Necro prayers
@@ -501,7 +504,6 @@ public class CoaezGiantMimic extends LoopingScript {
         }
     }
 
-    
     private void handleCombat() {
         LocalPlayer player = Client.getLocalPlayer();
         if (player == null) {
@@ -521,44 +523,60 @@ public class CoaezGiantMimic extends LoopingScript {
         Npc mimic = NpcQuery.newQuery().name("Giant Mimic").results().nearest();
 
         if (mimic != null) {
+            int mimicHealth = mimic.getCurrentHealth();
+            int mimicMaxHealth = mimic.getMaximumHealth();
             int animationId = mimic.getAnimationId();
             boolean surgeReady = System.currentTimeMillis() - lastSurgeTime >= SURGE_COOLDOWN;
 
             switch (animationId) {
                 case CHARGE_ANIMATION_ID:
                     handleChargeAttack(mimic, surgeReady);
-                    break;
+                    return;
                 case LEAP_ANIMATION_ID:
                     handleLeapAttack(mimic, surgeReady);
-                    break;
+                    return;
                 case COIN_ATTACK_ANIMATION_ID:
                     handleCoinAttack(mimic);
-                    break;
-                default:
-                    if (minimic != null) {
-                        minimic.interact("Attack");
-                        boolean successMinimic = Execution.delayUntil(random.nextLong(100, 600), () -> minimic.getCurrentHealth() >= 0);
-                    } else {
-                        mimic.interact("Attack");
-                        Execution.delay(random.nextLong(100, 200));
-                    }
-                    break;
+                    return;
             }
+
+            if (minimic != null) {
+                minimic.interact("Attack");
+                Execution.delay(random.nextLong(100, 200));
+                return;
+            }
+
+            mimic.interact("Attack");
+            Execution.delay(random.nextLong(100, 200));
 
             if (healIfNecessary()) {
                 return;
             }
+
             if (restorePrayerIfNecessary()) {
                 return;
             }
 
             if (activateOverloads && !isOverloadPotActive()) {
                 handleOverloadPotion();
+                return;
+            }
+
+            if (useInvokeDeath && !invokeDeathUsed && mimicHealth <= 0.2 * mimicMaxHealth) {
+                if (ActionBar.useAbility("Invoke Death")) {
+                    getConsole().println("Invoke Death ability used on Giant Mimic.");
+                    invokeDeathUsed = true;
+                    Execution.delay(1000);
+                    return;
+                } else {
+                    getConsole().println("Failed to use Invoke Death.");
+                }
             }
         } else {
             mimicSpawned = false;
             if (mimicKilled()) {
                 mimicKillCounter++;
+                invokeDeathUsed = false;
                 getConsole().println("Mimic killed. Total kills: " + mimicKillCounter);
                 botState = BotState.PICKUP_LOOT;
             } else {
@@ -571,7 +589,6 @@ public class CoaezGiantMimic extends LoopingScript {
         }
         activateSelectedPrayersAndCurses();
     }
-    
     private void handleLeapAttack(Npc mimic, boolean surgeReady) {
         LocalPlayer player = Client.getLocalPlayer();
         if (useSurge && surgeReady) {
