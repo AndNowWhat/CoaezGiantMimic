@@ -817,9 +817,16 @@ public class CoaezGiantMimic extends LoopingScript {
     }
     
     public boolean isOverloadPotActive() {
-    	Component overloadTimer = ComponentQuery.newQuery(284).item(49039).results().first();
-    	return overloadTimer != null;
+        int[] itemIds = {49039, 33210, 26093};
+
+        for (int itemId : itemIds) {
+            Component overloadTimer = ComponentQuery.newQuery(284).item(itemId).results().first();
+            if (overloadTimer != null) {
+                return true;
+            }
         }
+        return false;
+    }
     
     private void enablePrayer(String prayerName) {
         boolean success = ActionBar.usePrayer(prayerName);
