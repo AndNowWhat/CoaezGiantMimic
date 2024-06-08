@@ -236,20 +236,28 @@ public class CoaezGiantMimic extends LoopingScript {
     }
 
     public boolean inventoryInteract(String option, String... items) {
-        Pattern pattern = Regex.getPatternForContainingOneOf(items);
+        Pattern pattern = Pattern.compile(String.join("|", items), Pattern.CASE_INSENSITIVE);
         Item item = InventoryItemQuery.newQuery().name(pattern).results().first();
+        
         if (item != null) {
             String itemName = item.getName();
             Component itemComponent = ComponentQuery.newQuery(1473).componentIndex(5).itemName(itemName).results().first();
             if (itemComponent != null) {
-                itemComponent.interact(option);
-                return true;
-            } else {
-                return false;
+                return itemComponent.interact(option);
             }
-        } else {
-            return false;
         }
+
+        int[] overloadItemIds = {15332, 15333, 15334, 15335};
+        Item itemById = InventoryItemQuery.newQuery().ids(overloadItemIds).results().first();
+        if (itemById != null) {
+            String itemNameById = itemById.getName();
+            Component itemComponentById = ComponentQuery.newQuery(1473).componentIndex(5).itemName(itemNameById).results().first();
+            if (itemComponentById != null) {
+                return itemComponentById.interact(option);
+            }
+        }
+
+        return false;
     }
 
     private DialogState getDialogStateForDifficulty(Difficulty difficulty) {
@@ -712,7 +720,7 @@ public class CoaezGiantMimic extends LoopingScript {
 
     private void handleOverloadPotion() {
         if (inventoryInteract("Drink", "overload")) {
-            boolean success = Execution.delayUntil(random.nextInt(1200, 1800), () -> isOverloadPotActive());
+            boolean success = Execution.delayUntil(random.nextInt(1200, 1800), this::isOverloadPotActive);
             if (success) {
                 getConsole().println("Overload potion activated.");
             } else {
@@ -817,17 +825,16 @@ public class CoaezGiantMimic extends LoopingScript {
     }
     
     public boolean isOverloadPotActive() {
-        int[] itemIds = {49039, 33210, 26093};
+        int[] spriteIds = {49039, 33210, 26093};
 
-        for (int itemId : itemIds) {
-            Component overloadTimer = ComponentQuery.newQuery(284).item(itemId).results().first();
+        for (int spriteId : spriteIds) {
+            Component overloadTimer = ComponentQuery.newQuery(284).spriteId(spriteId).results().first();
             if (overloadTimer != null) {
                 return true;
             }
         }
         return false;
     }
-    
     private void enablePrayer(String prayerName) {
         boolean success = ActionBar.usePrayer(prayerName);
         Execution.delay(random.nextLong(1550, 2050));
