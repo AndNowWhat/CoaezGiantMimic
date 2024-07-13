@@ -44,6 +44,7 @@ import net.botwithus.rs3.events.impl.ChatMessageEvent;
 import net.botwithus.rs3.game.scene.entities.animation.SpotAnimation;
 import net.botwithus.rs3.game.queries.builders.animations.SpotAnimationQuery;
 import net.botwithus.rs3.game.hud.interfaces.Component.Type;
+import net.botwithus.rs3.script.events.PropertyUpdateRequestEvent;
 
 import java.awt.event.KeyEvent;
 import java.util.Random;
@@ -164,6 +165,9 @@ public class CoaezGiantMimic extends LoopingScript {
         ELITE,
         NONE
     }
+    
+    private boolean scriptActive = true; 
+    private boolean inCombat = false;
 
     public CoaezGiantMimic(String s, ScriptConfig scriptConfig, ScriptDefinition scriptDefinition) {
         super(s, scriptConfig, scriptDefinition);
@@ -171,6 +175,8 @@ public class CoaezGiantMimic extends LoopingScript {
         this.scriptStartTime = System.currentTimeMillis();
         this.config = scriptConfig;
         subscribe(ChatMessageEvent.class, this::onChatMessage);
+        subscribe(PropertyUpdateRequestEvent.class, this::onPropertyUpdateRequest);
+
 
         this.activateSoulSplit = false;
         this.useSurge = false;
@@ -208,6 +214,48 @@ public class CoaezGiantMimic extends LoopingScript {
         this.activateDesolation = false;
         this.activateAffliction = false;
         this.activateRuination = false;
+    }
+    
+    private void onPropertyUpdateRequest(PropertyUpdateRequestEvent event) {
+        getConsole().println("Received PropertyUpdateRequestEvent: " + event.getValue());
+        boolean newState = Boolean.parseBoolean(event.getValue());
+        if (event.getValue().equals("inCombat")) {
+            this.inCombat = newState;
+            if (inCombat) {
+                getConsole().println("Player is in combat");
+            } else {
+                getConsole().println("Player is not in combat");
+            }
+            return;
+        }
+        if (newState != this.scriptActive) {
+            if (!newState && Client.getLocalPlayer() != null && Client.getLocalPlayer().inCombat()) {
+                getConsole().println("Cannot deactivate script while player is in combat");
+                return;
+            }
+
+            this.scriptActive = newState;
+            if (this.scriptActive) {
+                setActive(true);
+                getConsole().println("Script activated");
+                botState = BotState.CHECK_DIFFICULTY;
+                checkDifficulty();
+                if (sgc != null) {
+                    loadConfiguration();
+                    getConsole().println("Configuration loaded");
+                }
+            } else {
+                setActive(false);
+                getConsole().println("Script deactivated");
+            }
+        }
+    }
+    
+    private void updateCombatState() {
+        LocalPlayer player = Client.getLocalPlayer();
+        if (player != null) {
+            this.inCombat = player.inCombat();
+        }
     }
 
 
@@ -277,6 +325,10 @@ public class CoaezGiantMimic extends LoopingScript {
 
     @Override
     public void onLoop() {
+        if (!scriptActive) {
+            return;
+        }
+        
         if (!isRunning) {
             return;
         }
@@ -289,6 +341,7 @@ public class CoaezGiantMimic extends LoopingScript {
 
         updatePlayerState();
         saveConfiguration();
+        updateCombatState();
 
         switch (botState) {
             case NOT_LOGGED_IN:
@@ -303,7 +356,7 @@ public class CoaezGiantMimic extends LoopingScript {
                 if (!isRunning) return;
                 break;
             case LOAD_PRESET:
-            	loadPreset();
+                loadPreset();
                 if (!isRunning) return;
                 break;
             case REFILL_PRAYER:
@@ -333,8 +386,24 @@ public class CoaezGiantMimic extends LoopingScript {
                 return;
         }
     }
+    
+    private void handleUseToken() {
+        if (inventoryInteract("Teleport", "Mimic kill token")) {
+            getConsole().println("Teleport action performed on Mimic kill token.");
+            Execution.delay(random.nextInt(1200, 1800));
+            dialogState = DialogState.CONFIRM_YES;
+            if (!handleMimicDialog()) { 
+                getConsole().println("Failed to handle Mimic dialog, retrying...");
+                return;
+            }
 
-
+            navigateToArenaMiddle();
+        } else {
+            getConsole().println("No tokens found. Stopping.");
+            botState = BotState.STOPPED;
+            stopScript();
+        }
+    }
 
     public void startScript() {
         if (!isRunning) {
@@ -442,23 +511,6 @@ public class CoaezGiantMimic extends LoopingScript {
         }
     }
 
-
-    private void handleUseToken() {
-        if (inventoryInteract("Teleport", "Mimic kill token")) {
-            getConsole().println("Teleport action performed on Mimic kill token.");
-            Execution.delay(random.nextInt(1200, 1800));
-            dialogState = DialogState.CONFIRM_YES;
-            handleMimicDialog();
-            if (!isRunning) return; 
-
-            navigateToArenaMiddle();
-        } else {
-            getConsole().println("No tokens found. Stopping.");
-            botState = BotState.STOPPED;
-            stopScript();
-        }
-    }
-
     private void handleRefillPrayer() {
         if (!useAltar) {
             botState = BotState.USE_TOKEN;
@@ -513,6 +565,8 @@ public class CoaezGiantMimic extends LoopingScript {
     }
 
     private void handleCombat() {
+        updateCombatState();
+
         LocalPlayer player = Client.getLocalPlayer();
         if (player == null) {
             getConsole().println("Player not found.");
@@ -570,11 +624,10 @@ public class CoaezGiantMimic extends LoopingScript {
                 return;
             }
 
-            if (useInvokeDeath && !invokeDeathUsed && mimicHealth <= 0.2 * mimicMaxHealth) {
+            if (useInvokeDeath && !invokeDeathUsed && mimicHealth <= 0.205 * mimicMaxHealth) {
                 if (ActionBar.useAbility("Invoke Death")) {
                     getConsole().println("Invoke Death ability used on Giant Mimic.");
                     invokeDeathUsed = true;
-                    Execution.delay(1000);
                     return;
                 } else {
                     getConsole().println("Failed to use Invoke Death.");
@@ -976,45 +1029,47 @@ public class CoaezGiantMimic extends LoopingScript {
             botState = BotState.NAVIGATING_TO_WARS_RETREAT;
     }
     
-    private void handleMimicDialog() {
-        int retryCount = 0;
-        
-        while (retryCount < MAX_RETRIES) {
-            dialogState = DialogState.START;
-            long startTime = System.currentTimeMillis();
+    private boolean handleMimicDialog() {
+        dialogState = DialogState.START;
+        long startTime = System.currentTimeMillis();
 
-            while (Dialog.isOpen() && (System.currentTimeMillis() - startTime < TIMEOUT)) {
-                switch (dialogState) {
-                    case START:
-                        dialogState = DialogState.CONFIRM_YES;
-                        break;
-                    case CONFIRM_YES:
-                        if (Interfaces.isOpen(1188)) {
-                            pressKeyAndAdvance(KeyEvent.VK_1, DialogState.SELECT_DIFFICULTY);
-                        }
-                        break;
-                    case SELECT_DIFFICULTY:
-                        handleDifficultySelection();
-                        break;
-                    default:
-                        getConsole().println("Unknown Dialog State: " + dialogState);
-                        break;
-                }
-                Execution.delay(100);
+        while (Dialog.isOpen() && (System.currentTimeMillis() - startTime < TIMEOUT)) {
+            getConsole().println("Current dialog state: " + dialogState);
+
+            switch (dialogState) {
+                case START:
+                    getConsole().println("Dialog state START. Moving to CONFIRM_YES.");
+                    dialogState = DialogState.CONFIRM_YES;
+                    break;
+                case CONFIRM_YES:
+                    if (Interfaces.isOpen(1188)) {
+                        Execution.delay(random.nextInt(1200, 1800));
+                        getConsole().println("Dialog state CONFIRM_YES. Interface 1188 is open. Pressing key 1 to confirm.");
+                        pressKeyAndAdvance(KeyEvent.VK_1, DialogState.SELECT_DIFFICULTY);
+                    } else {
+                        getConsole().println("Dialog state CONFIRM_YES. Interface 1188 is not open.");
+                    }
+                    break;
+                case SELECT_DIFFICULTY:
+                    getConsole().println("Dialog state SELECT_DIFFICULTY. Handling difficulty selection.");
+                    handleDifficultySelection();
+                    break;
+                default:
+                    getConsole().println("Unknown Dialog State: " + dialogState);
+                    break;
             }
-
-            if (!Dialog.isOpen()) {
-                return;
-            }
-
-            retryCount++;
-            getConsole().println("Retrying... Attempt: " + retryCount);
-            Execution.delay(200); 
+            Execution.delay(100);
         }
 
-        getConsole().println("Max retries reached. Exiting...");
+        if (!Dialog.isOpen()) {
+            getConsole().println("Dialog closed successfully.");
+            return true;
+        } else {
+            getConsole().println("Dialog handling failed.");
+            return false;
+        }
     }
-
+    
     private void handleDifficultySelection() {
         switch (difficulty) {
             case BEGINNER:
@@ -1238,23 +1293,6 @@ public class CoaezGiantMimic extends LoopingScript {
                 .collect(Collectors.toList());
     }
 
-    private List<Coordinate> getSafeCoordinatesAwayFromMimic(Coordinate playerCoordinate, Area mimicArea) {
-        List<Coordinate> possibleCoordinates = new ArrayList<>();
-
-        possibleCoordinates.add(new Coordinate(playerCoordinate.getX() + 3, playerCoordinate.getY(), playerCoordinate.getZ()));
-        possibleCoordinates.add(new Coordinate(playerCoordinate.getX() - 3, playerCoordinate.getY(), playerCoordinate.getZ()));
-        possibleCoordinates.add(new Coordinate(playerCoordinate.getX(), playerCoordinate.getY() + 3, playerCoordinate.getZ()));
-        possibleCoordinates.add(new Coordinate(playerCoordinate.getX(), playerCoordinate.getY() - 3, playerCoordinate.getZ()));
-        possibleCoordinates.add(new Coordinate(playerCoordinate.getX() + 3, playerCoordinate.getY() + 3, playerCoordinate.getZ()));
-        possibleCoordinates.add(new Coordinate(playerCoordinate.getX() - 3, playerCoordinate.getY() - 3, playerCoordinate.getZ()));
-        possibleCoordinates.add(new Coordinate(playerCoordinate.getX() + 3, playerCoordinate.getY() - 3, playerCoordinate.getZ()));
-        possibleCoordinates.add(new Coordinate(playerCoordinate.getX() - 3, playerCoordinate.getY() + 3, playerCoordinate.getZ()));
-
-        return possibleCoordinates.stream()
-                .filter(coord -> !mimicArea.contains(coord))
-                .collect(Collectors.toList());
-    }
-
     private Coordinate getCoordinateNorthOfPlayer(int tilesNorth) {
         LocalPlayer player = Client.getLocalPlayer();
         if (player != null) {
@@ -1276,6 +1314,7 @@ public class CoaezGiantMimic extends LoopingScript {
             botState = BotState.USE_TOKEN;
             return;
         }
+    	conjureUndeadArmy();
 
         Coordinate targetCoordinate = getCoordinateNorthOfPlayer(9);
         if (targetCoordinate != null) {
@@ -1287,6 +1326,19 @@ public class CoaezGiantMimic extends LoopingScript {
             }
         } else {
             getConsole().println("Failed to determine target coordinate.");
+        }
+    }
+    
+    public void conjureUndeadArmy() {
+        if (ActionBar.containsAbility("Conjure undead army")) {
+            if (ActionBar.useAbility("Conjure undead army")) {
+            	getConsole().println("Used the ability 'Conjure undead army'.");
+                Execution.delay(random.nextInt(1000, 1500));
+            } else {
+                getConsole().println("Failed to use the ability 'Conjure undead army'.");
+            }
+        } else {
+            getConsole().println("The ability 'Conjure undead army' is not available in the ActionBar.");
         }
     }
     

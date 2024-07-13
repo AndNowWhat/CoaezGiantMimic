@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "net.botwithus.debug"
-version = "1.3-SNAPSHOT"
+version = "1.5-SNAPSHOT"
 
 repositories {
     mavenLocal()

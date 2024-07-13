@@ -10,7 +10,7 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
 
     private CoaezGiantMimic script;
     private ScriptConfig config;
-    
+
     private boolean beginner;
     private boolean medium;
     private boolean hard;
@@ -53,8 +53,8 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
         super(scriptConsole);
         this.script = script;
         this.config = config != null ? config : new ScriptConfig("defaultConfig", true);
-        loadConfig(); 
- 
+        loadConfig();
+
         this.beginner = false;
         this.medium = false;
         this.hard = false;
@@ -127,7 +127,7 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
             if (config.containsKey(KEY_MEDIUM)) medium = Boolean.parseBoolean(config.getProperty(KEY_MEDIUM));
             if (config.containsKey(KEY_HARD)) hard = Boolean.parseBoolean(config.getProperty(KEY_HARD));
             if (config.containsKey(KEY_ELITE)) elite = Boolean.parseBoolean(config.getProperty(KEY_ELITE));
-            
+
             if (beginner) script.setDifficulty(CoaezGiantMimic.Difficulty.BEGINNER);
             if (medium) script.setDifficulty(CoaezGiantMimic.Difficulty.MEDIUM);
             if (hard) script.setDifficulty(CoaezGiantMimic.Difficulty.HARD);
@@ -162,11 +162,32 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
             if (config.containsKey(KEY_USE_INVOKEDEATH)) script.useInvokeDeath = Boolean.parseBoolean(config.getProperty(KEY_USE_INVOKEDEATH));
 
         }
-        
+
     }
 
     @Override
     public void drawSettings() {
+        // Set style variables for a professional look
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 5.0f);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 5.0f);
+        ImGui.PushStyleVar(ImGuiStyleVar.GrabRounding, 5.0f);
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, 10.0f, 10.0f);
+
+        // Set colors for a dark background and modern theme
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, 0.1f, 0.1f, 0.1f, 1.0f);  // Dark background
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, 0.2f, 0.2f, 0.2f, 1.0f);  // Dark for frame background
+        ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, 0.3f, 0.3f, 0.3f, 1.0f);  // Lighter for hovered frame
+        ImGui.PushStyleColor(ImGuiCol.FrameBgActive, 0.4f, 0.4f, 0.4f, 1.0f);  // Even lighter for active frame
+        ImGui.PushStyleColor(ImGuiCol.TitleBg, 0.2f, 0.2f, 0.2f, 1.0f);  // Dark for title background
+        ImGui.PushStyleColor(ImGuiCol.TitleBgActive, 0.3f, 0.3f, 0.3f, 1.0f);  // Dark for active title background
+        ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed, 0.2f, 0.2f, 0.2f, 1.0f);  // Dark for collapsed title background
+        ImGui.PushStyleColor(ImGuiCol.Button, 0.4f, 0.4f, 0.4f, 1.0f);  // Dark for buttons
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, 0.5f, 0.5f, 0.5f, 1.0f);  // Lighter for hovered buttons
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, 0.6f, 0.6f, 0.6f, 1.0f);  // Even lighter for active buttons
+        ImGui.PushStyleColor(ImGuiCol.CheckMark, 1.0f, 1.0f, 1.0f, 1.0f);  // White check mark
+        ImGui.PushStyleColor(ImGuiCol.Text, 0.9f, 0.9f, 0.9f, 1.0f);  // Light gray text
+        ImGui.PushStyleColor(ImGuiCol.TextDisabled, 0.6f, 0.6f, 0.6f, 1.0f);  // Dark gray for disabled text
+
         if (ImGui.Begin("Coaez Giant Mimic", ImGuiWindowFlag.None.getValue())) {
             if (ImGui.Button("Start")) {
                 script.startScript();
@@ -276,8 +297,11 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
 
             ImGui.End();
         }
-    }
 
+        // Pop style variables and colors
+        ImGui.PopStyleVar(4);
+        ImGui.PopStyleColor(12);
+    }
 
     private String formatTime(long timeInMillis) {
         long hours = timeInMillis / 3600000;
@@ -285,6 +309,7 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
         long seconds = (timeInMillis / 1000) % 60;
         return String.format("%02d:%02d:%02d", hours, minutes, seconds);
     }
+
     private void drawPrayerSettings() {
         ImGui.Columns(2, "prayerColumns", false);
 
@@ -335,7 +360,7 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
         //script.activateSuperPotions = ImGui.Checkbox("Use Super Potions", script.activateSuperPotions);
 
     }
-    
+
     private void drawDescriptionWindow() {
         ImGui.Text("Kills Giant Mimic on all difficulties.");
 
@@ -360,7 +385,6 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
         ImGui.Text("- Utility Items: Elven ritual shard and enhanced Excalibur, unless fully maxed as it will slow us down");
     }
 
-
     private void setAllFalse() {
         setBeginner(false);
         setMedium(false);
@@ -371,5 +395,92 @@ public class CoaezGiantMimicGraphicsContext extends ScriptGraphicsContext {
     @Override
     public void drawOverlay() {
         super.drawOverlay();
+    }
+    
+    public class ImGuiCol {
+        public static final int Text = 0;
+        public static final int TextDisabled = 1;
+        public static final int WindowBg = 2;
+        public static final int ChildBg = 3;
+        public static final int PopupBg = 4;
+        public static final int Border = 5;
+        public static final int BorderShadow = 6;
+        public static final int FrameBg = 7;
+        public static final int FrameBgHovered = 8;
+        public static final int FrameBgActive = 9;
+        public static final int TitleBg = 10;
+        public static final int TitleBgActive = 11;
+        public static final int TitleBgCollapsed = 12;
+        public static final int MenuBarBg = 13;
+        public static final int ScrollbarBg = 14;
+        public static final int ScrollbarGrab = 15;
+        public static final int ScrollbarGrabHovered = 16;
+        public static final int ScrollbarGrabActive = 17;
+        public static final int CheckMark = 18;
+        public static final int SliderGrab = 19;
+        public static final int SliderGrabActive = 20;
+        public static final int Button = 21;
+        public static final int ButtonHovered = 22;
+        public static final int ButtonActive = 23;
+        public static final int Header = 24;
+        public static final int HeaderHovered = 25;
+        public static final int HeaderActive = 26;
+        public static final int Separator = 27;
+        public static final int SeparatorHovered = 28;
+        public static final int SeparatorActive = 29;
+        public static final int ResizeGrip = 30;
+        public static final int ResizeGripHovered = 31;
+        public static final int ResizeGripActive = 32;
+        public static final int Tab = 33;
+        public static final int TabHovered = 34;
+        public static final int TabActive = 35;
+        public static final int TabUnfocused = 36;
+        public static final int TabUnfocusedActive = 37;
+        public static final int DockingPreview = 38;
+        public static final int DockingEmptyBg = 39;
+        public static final int PlotLines = 40;
+        public static final int PlotLinesHovered = 41;
+        public static final int PlotHistogram = 42;
+        public static final int PlotHistogramHovered = 43;
+        public static final int TableHeaderBg = 44;
+        public static final int TableBorderStrong = 45;
+        public static final int TableBorderLight = 46;
+        public static final int TableRowBg = 47;
+        public static final int TableRowBgAlt = 48;
+        public static final int TextSelectedBg = 49;
+        public static final int DragDropTarget = 50;
+        public static final int NavHighlight = 51;
+        public static final int NavWindowingHighlight = 52;
+        public static final int NavWindowingDimBg = 53;
+        public static final int ModalWindowDimBg = 54;
+    }
+
+    public class ImGuiStyleVar {
+        public static final int Alpha = 0;
+        public static final int DisabledAlpha = 1;
+        public static final int WindowPadding = 2;
+        public static final int WindowRounding = 3;
+        public static final int WindowBorderSize = 4;
+        public static final int WindowMinSize = 5;
+        public static final int WindowTitleAlign = 6;
+        public static final int ChildRounding = 7;
+        public static final int ChildBorderSize = 8;
+        public static final int PopupRounding = 9;
+        public static final int PopupBorderSize = 10;
+        public static final int FramePadding = 11;
+        public static final int FrameRounding = 12;
+        public static final int FrameBorderSize = 13;
+        public static final int ItemSpacing = 14;
+        public static final int ItemInnerSpacing = 15;
+        public static final int IndentSpacing = 16;
+        public static final int CellPadding = 17;
+        public static final int ScrollbarSize = 18;
+        public static final int ScrollbarRounding = 19;
+        public static final int GrabMinSize = 20;
+        public static final int GrabRounding = 21;
+        public static final int TabRounding = 22;
+        public static final int ButtonTextAlign = 23;
+        public static final int SelectableTextAlign = 24;
+        public static final int COUNT = 25;
     }
 }
